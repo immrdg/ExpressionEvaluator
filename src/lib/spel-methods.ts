@@ -1,4 +1,3 @@
-// SpEL method definitions with descriptions and examples
 export interface SpelMethod {
   name: string;
   description: string;
@@ -22,7 +21,6 @@ export const spelMethods: SpelMethod[] = [
     returns: 'boolean',
     parameters: ['value']
   },
-  ,
   {
     name: 'equalsIgnoreCase',
     description: 'Compares two values for equality - Ignores Case',
@@ -210,7 +208,6 @@ export const spelMethods: SpelMethod[] = [
     returns: 'string',
     parameters: ['...args']
   },
-  
   {
     name: 'indent',
     description: 'Adjusts indentation of each line',
