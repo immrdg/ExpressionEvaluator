@@ -22,6 +22,11 @@ interface ValidationError {
   position: number;
 }
 
+interface SuggestionPosition {
+  top: number;
+  left: number;
+}
+
 function App() {
   const [expression, setExpression] = useState('');
   const [keys, setKeys] = useState<string[]>([]);
@@ -32,17 +37,18 @@ function App() {
   const [suggestions, setSuggestions] = useState<SpelMethod[]>([]);
   const [cursorPosition, setCursorPosition] = useState<number>(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionPosition, setSuggestionPosition] = useState<SuggestionPosition>({ top: 0, left: 0 });
   const [validationError, setValidationError] = useState<ValidationError | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [lineCount, setLineCount] = useState(1);
 
   const validateExpression = (expr: string): ValidationError | null => {
-    // Check for concatenation within get()
-    const concatenationInGetRegex = /get\(['"].*?\.concat.*?\)/;
-    if (concatenationInGetRegex.test(expr)) {
+    // Check for concatenation within get() parameters
+    const invalidConcatInGetRegex = /get\(['"].*?\+.*?['"]\)/;
+    if (invalidConcatInGetRegex.test(expr)) {
       return {
-        message: "String concatenation is not allowed within get() calls. Use get() for simple variable names only.",
-        position: expr.search(concatenationInGetRegex)
+        message: "String concatenation is not allowed within get() parameters. Use get() for simple variable names only.",
+        position: expr.search(invalidConcatInGetRegex)
       };
     }
 
@@ -55,12 +61,12 @@ function App() {
       };
     }
 
-    // Check for any method calls within get()
-    const methodCallInGetRegex = /get\(['"].*?\.[a-zA-Z]+\(.*?\)/;
-    if (methodCallInGetRegex.test(expr)) {
+    // Check for invalid characters in get() parameters
+    const invalidCharsInGetRegex = /get\(['"][^'"\w\d]+['"]\)/;
+    if (invalidCharsInGetRegex.test(expr)) {
       return {
-        message: "Method calls are not allowed within get(). Use get() for simple variable names only.",
-        position: expr.search(methodCallInGetRegex)
+        message: "Only alphanumeric characters are allowed in get() parameters.",
+        position: expr.search(invalidCharsInGetRegex)
       };
     }
 
@@ -112,6 +118,25 @@ function App() {
     );
   };
 
+  const updateSuggestionPosition = () => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+    const textBeforeCursor = expression.slice(0, cursorPosition);
+    const lines = textBeforeCursor.split('\n');
+    const currentLineNumber = lines.length - 1;
+    const currentLineText = lines[currentLineNumber];
+
+    // Calculate the position of the cursor
+    const lineHeight = 20; // Approximate line height in pixels
+    const charWidth = 8.5; // Approximate character width in pixels
+
+    const top = currentLineNumber * lineHeight + textarea.getBoundingClientRect().top + window.scrollY;
+    const left = currentLineText.length * charWidth + textarea.getBoundingClientRect().left;
+
+    setSuggestionPosition({ top, left });
+  };
+
   const handleExpressionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newExpression = e.target.value;
     const cursorPos = e.target.selectionStart;
@@ -129,6 +154,7 @@ function App() {
       );
       setSuggestions(matchedMethods);
       setShowSuggestions(matchedMethods.length > 0);
+      updateSuggestionPosition();
     } else {
       setShowSuggestions(false);
     }
@@ -282,7 +308,13 @@ function App() {
                   )}
 
                   {showSuggestions && (
-                      <div className="absolute z-10 w-full max-w-md bg-[#3c3f41] border border-[#323232] rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      <div
+                          className="fixed z-10 w-80 bg-[#3c3f41] border border-[#323232] rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                          style={{
+                            top: `${suggestionPosition.top}px`,
+                            left: `${suggestionPosition.left}px`,
+                          }}
+                      >
                         {suggestions.map((method) => (
                             <div
                                 key={method.name}
