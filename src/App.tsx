@@ -125,14 +125,30 @@ function App() {
     const textBeforeCursor = expression.slice(0, cursorPosition);
     const lines = textBeforeCursor.split('\n');
     const currentLineNumber = lines.length - 1;
+
+    // Get the current line's content up to the cursor
     const currentLineText = lines[currentLineNumber];
 
-    // Calculate the position of the cursor
-    const lineHeight = 20; // Approximate line height in pixels
-    const charWidth = 8.5; // Approximate character width in pixels
+    // Create a temporary span to measure text width
+    const measureSpan = document.createElement('span');
+    measureSpan.style.visibility = 'hidden';
+    measureSpan.style.position = 'absolute';
+    measureSpan.style.whiteSpace = 'pre-wrap';
+    measureSpan.style.wordWrap = 'break-word';
+    measureSpan.style.font = window.getComputedStyle(textarea).font;
+    measureSpan.style.width = window.getComputedStyle(textarea).width;
+    measureSpan.textContent = currentLineText;
+    document.body.appendChild(measureSpan);
 
-    const top = currentLineNumber * lineHeight + textarea.getBoundingClientRect().top + window.scrollY;
-    const left = currentLineText.length * charWidth + textarea.getBoundingClientRect().left;
+    // Calculate the height of wrapped lines
+    const lineHeight = 20; // Line height in pixels
+    const totalHeight = measureSpan.offsetHeight;
+    const wrappedLines = Math.floor(totalHeight / lineHeight);
+
+    document.body.removeChild(measureSpan);
+
+    const top = (currentLineNumber + wrappedLines) * lineHeight + textarea.getBoundingClientRect().top + window.scrollY;
+    const left = textarea.getBoundingClientRect().left + 16; // Add padding offset
 
     setSuggestionPosition({ top, left });
   };
